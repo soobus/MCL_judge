@@ -1,0 +1,53 @@
+<p id="notice"><%= notice %></p>
+
+<p>
+  <b>#</b>
+  <%= @task.id %>
+</p>
+
+<p>
+  <b>
+  <%= @task.title %>
+  </b>
+</p>
+
+<p>
+  <%= @task.data %>
+</p>
+
+<p>
+  <img src="<%= @task.img_url %>">
+</p>
+
+<p>
+  <b>Answer:</b>
+  <%= @task.answer %>
+</p>
+
+<p>
+  <b>User answer:</b>
+  <%= @task.user_answer %>
+</p>
+
+<p>
+  </p>
+
+<div class="answer_form">
+  <%= form_for @task do |f| %>
+    <fieldset>
+      <legend><b>Добавить ответ:</b></legend>
+
+      <div class="field">
+      <%= f.label :user_answer, 'Ответ:' %>
+      <%= f.text_field :user_answer, size: 40 %>
+      </div>
+
+      <div class="actions">
+      <%= f.submit %>
+      </div>
+    </fieldset>
+  <% end %>
+</div>
+
+<p><%= @task.check_answer ? 'Верно!' : 'Неверно' %></p>
+<%= link_to 'Back', tasks_path %>

@@ -1,0 +1,11 @@
+#Valery Nemychnikova. Last edited Jan 1 2014
+
+#Data (global variables) getter and keeper
+
+#получение списка терминалов
+terminals_list = File.open("app/models/terminals", 'r')
+$terminals = terminals_list.read.split("###\n").map!{|group| group.split("\n")}
+terminals_list.close
+
+$tokens = []
+$tree = Tree.new

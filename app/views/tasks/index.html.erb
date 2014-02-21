@@ -1,0 +1,24 @@
+<h1>MCL Testing System</h1>
+
+<table>
+  <tr>
+    <th>#</th>
+    <th>Задача</th>
+    <th></th>
+    <th></th>
+    <th></th>
+  </tr>
+
+<% @tasks.each do |task| %>
+  <tr>
+    <td><%= task.id %></td>
+    <td><%= link_to task.title, task %></td>
+    <td><%= link_to 'Редактировать', edit_task_path(task) %></td>
+    <td><%= link_to 'Удалить', task, method: :delete, data: { confirm: 'Are you sure?' } %></td>
+  </tr>
+<% end %>
+</table>
+
+<br />
+
+<%= link_to 'Добавить задачу', new_task_path %>
