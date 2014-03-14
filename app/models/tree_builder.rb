@@ -3,16 +3,17 @@
 # The Tree Builder by Input Array
 
 =begin
-<expr> ::= <addend> <sum-op> <expr>
-<addend> ::= <primary> <mult-op> <addend>  
+<expr> ::= <minus-expr> [+ <expr>]
+<minus-expr> ::= <addend> [- <minus-expr>]
+<addend> ::= <pow> <mult-op> <addend>  
+<pow> ::= <primary> [^ <pow>]
 <primary> ::= [-] (<number> | <identifier> | <function-call> | ‘(‘ <expr> ‘)’)
 <function-call> ::= <identifier> ‘(‘ <expr> ‘)’ 
 =end
 
-
 class Array
-  def parse_expression parent=0
-    #puts "parsing #{self} : expr"
+  def parse_expression
+    #print self
     brackets = 0
     delimiter = nil
     for i in 0...self.size
@@ -21,7 +22,8 @@ class Array
         brackets+=1
       when ')'
         brackets-=1
-      when '+', '-'
+      when '+'
+     #   puts 'met +'
         if brackets == 0
           delimiter = i
           break
@@ -30,77 +32,162 @@ class Array
     end
     
     if delimiter == nil
-      self.parse_addend(parent)
+      return self.parse_minus_expression
     else
-      $tree.add_node(parent, self[delimiter])
-      just_added_node = $tree.nodes.size-1
-      #puts "added node #{parent}, #{self[delimiter]}"
+      tree = Tree.new(self[delimiter])
+
+      tree.add_child(self[0...delimiter].parse_minus_expression) if not self[0...delimiter].empty?
+      tree.add_child(self[delimiter+1..-1].parse_expression)
+
       #$tree.draw
-      self[0...delimiter].parse_addend(just_added_node) if not self[0...delimiter].empty?
-      self[delimiter+1..-1].parse_expression(just_added_node)
     end
+    #tree.draw
+   # puts 'parse_expression is going to return:'
+    #print tree
+    #tree.draw
+    return tree
   end
 
-  def parse_addend parent
-      #puts "parsing #{self}: addend"
-      brackets = 0
-      delimiter = nil
-      for i in 0...self.size
-        case self[i]
-        when '('
-         brackets+=1
-        when ')'
-          brackets-=1
-        when '*', '/'
-          if brackets == 0
-            delimiter = i
-            break
-          end
+  def parse_minus_expression
+   # print self
+    brackets = 0
+    delimiter = nil
+    for i in 0...self.size
+      case self[i]
+      when '('
+        brackets+=1
+      when ')'
+        brackets-=1
+      when '-'
+        if brackets == 0
+          delimiter = i
+          break
         end
       end
+    end
+    
+    if delimiter == nil
+      return self.parse_addend
+    else
+      tree = Tree.new(self[delimiter])
+
+      tree.add_child(self[0...delimiter].parse_addend) if not self[0...delimiter].empty?
+      tree.add_child(self[delimiter+1..-1].parse_minus_expression)
+
+      #puts "added node #{parent}, #{self[delimiter]}"
+      #$tree.draw
+    end
+    #puts "parse_minus is going to return"
+    #print tree
+    #tree.draw
+    return tree
+  end
+  def parse_addend
+   # print self
+    brackets = 0
+    delimiter = nil
+    for i in 0...self.size
+      case self[i]
+      when '('
+        brackets+=1
+      when ')'
+        brackets-=1
+      when '*', '/'
+        if brackets == 0
+          delimiter = i
+          break
+        end
+      end
+    end
      
-      if delimiter == nil
-        self.parse_primary(parent)
-      else
-        $tree.add_node(parent, self[delimiter])
-        #puts "added node #{parent}, #{self[delimiter]}"
-        #$tree.draw
-        just_added_node = $tree.nodes.size-1
-        self[0...delimiter].parse_primary(just_added_node)
-        self[delimiter+1..-1].parse_addend(just_added_node)
-      end  
+    if delimiter == nil
+      return self.parse_pow
+    else
+      tree = Tree.new(self[delimiter])
+      tree.add_child(self[0...delimiter].parse_pow)
+      tree.add_child(self[delimiter+1..-1].parse_addend)
+    end
+    #puts "parse_addend is going to return"
+    #print tree
+    #tree.draw
+    return tree
+  end
+  
+  def parse_pow
+    #print self
+    brackets = 0
+    delimiter = nil
+    for i in 0...self.size
+        case self[i]
+        when '('
+          brackets+=1
+        when ')'
+          brackets-=1
+        when '^'
+          if brackets == 0
+            delimiter = i
+          break
+        end
+      end
+    end
+     
+    if delimiter == nil
+      return self.parse_primary
+    else
+      tree = Tree.new(self[delimiter])
+      tree.add_child(self[0...delimiter].parse_primary)
+      tree.add_child(self[delimiter+1..-1].parse_pow)
+    end
+    #puts "parse_pow is going to return"
+    #print tree
+    #tree.draw
+    return tree
   end
 
-  def parse_primary parent
-    #puts "parsing #{self}: primary"
+
+  def parse_primary
+    #puts 'primary'
+    #print self
     if self.first == '-'
       self.shift
-      self.parse_primary(parent)
+      tree = Tree.new('-')
+      tree.add_child(self.parse_primary)
     else
       if self.first == '(' && self.last == ')'
         self.pop
         self.shift
-        self.parse_expression(parent)
+        return self.parse_expression
       else
         if self.size == 1
-          $tree.add_node(parent, self.first)
-          #puts "added node #{parent} #{self.first}"
+          tree = Tree.new(self.first)
+     #     puts "added node #{self.first}"
           #$tree.draw
         else
-          parse_function_call(parent)
+      #    puts 'going to parse f call'
+          return self.parse_function_call
         end
       end
     end
+   # puts "parse_primary is going to return"
+   # print tree
+    #tree.draw
+    return tree
   end
 
-  def parse_function_call parent
-    #puts "parsing #{self}: func-call"
-    $tree.add_node(parent, self.shift)
-    #puts "added node #{parent} self.shift"
-    #$tree.draw
+  def parse_function_call
+   # print self
+    tree = Tree.new(self.shift)
+    #print tree.data
     self.shift
     self.pop
-    self.parse_expression($tree.nodes.size-1)
+    #print self
+    tree.add_child(self.parse_expression)
+   # puts "parse function call is going to return"
+    #print tree
+   # tree.draw
+    return tree
   end
 end
 
+#tree = ['1', '+', '2'].parse_expression
+#tree.draw

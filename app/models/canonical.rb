@@ -1,175 +1,204 @@
-# Valery Nemychnikova Jan 26 2014
+# Expressions Canonizer
 
-#Tree Canonizer
+#Вынесение чего-нить за скобку, дабы посчитать константы
+
+require_relative 'tree.rb'
+require_relative 'tree_builder.rb'
+require_relative 'calculator.rb'
 
 class Tree
-  
-  def canonize operate_sum=true, operate_mul=true, multiply_brackets=true, calculate=true
-    self.calculate if calculate
-    self.plus_to_minus 
-    self.operate_sum if operate_sum
-    self.operate_mul if operate_mul
-    self.calculate if calculate
-    self.operate_sum if operate_sum
-    #self.multiply_brackets if multiply_brackets
-    self.sort 
-  end
-
-  def multiply_brackets #here
-    multipliers = [] #многомерный массив индексов перемножаемых вершин
-    almost_result = [] #двумерный массив перемноженных вершин
-
-    @nodes.each do |node|
-      if node.data == '*'
-        node.data = '+' #на этом месте теперь должен висеть +
-        node.children.each do |child_id|
-          multipliers << @nodes[child_id].children
-        end
-        almost_result = multipliers.generate_multiplied
-        node.children.clear #
-        almost_result.each do |set|
-          self.add_node(node.id, '+')
-          set.each do |addend_id|
-            @nodes.last.add_son(addend_id)
-            @nodes[addend_id].add_parent(@nodes.last.id)
+  def op_sign sign
+    if @data == sign
+      @children.each do |child|
+        if child.data == sign
+          child.children.each do |childchild|
+            @children << childchild
           end
+          @children.delete(child)
         end
       end
-      multipliers = []
-      almost_result = []
     end
-
-
-  end
-
-  def plus_to_minus 
-    @nodes.each do |node|
-      if node.data == '-' && node.children.size == 2
-        node.data = '+' #меняем минус на плюс
-        #puts 'changed + to -'
-        self.add_node(node.id, '-') #добавляем ребенка-минус
-        #puts 'have - neighbour' #здесь ошибка
-        move_children(node.id, @nodes.last.id, [1]) #перенести детей вершины минус в вершину плюс
-        #puts '- children moved to +'
-        #puts 'added son'
+    unless @children.empty?
+      @children.each do |child|
+        child.op_sign(sign)
       end
-      #puts 'made one iteration'
     end
   end
 
-  def move_children node1_id, node2_id, child_ids #заменяет детей вершины на детей первой вершины. айди вершин указаны в массиве (нумерация с нуля)
-    children = []
-    child_ids.each do |child_index|
-      children << @nodes[node1_id].children[child_index]
-      @nodes[node1_id].children[child_index] = nil
+  def open_brackets
+
+    #puts "starting opening brackets for #{@data}"
+
+    @children.each do |child|
+      child.open_brackets 
     end
 
-    @nodes[node1_id].children.compact!.uniq!
-    
-    #puts 'after getting children from node1'
+    #puts "opened all children brackets for #{@data}"
+
+    if @data == '*'
+      #puts "data == *, started real processing"
+      new_tree = Tree.new('+')
+      #puts 'ring before multiplier'
+      @children[0].multiply_by(@children[1]).each do |new_child|
+    #    puts 'new child'
+    #    new_child.draw
+        new_tree.add_child(new_child)
+    #    puts 'new_tree'
+    #    new_tree.draw
+      end
+    #  puts 'ring after multiplier'
+      for i in 2...@children.size
+    #    puts "in for; mul-ing #{@children[i]}"
+        @children[i].multiply_by(new_tree).each do |new_child|
+          new_tree.add_child(new_child)
+        end
+      end
+      
+      if new_tree.children.size > 1
+        @data = new_tree.data
+        @children.clear
+        @children = new_tree.children
+      end
+    end
+  end
+
+  def multiply_by tree #принимает на вход два дерева с корнем + или const. Возвращает массив со всевозможными произведениями или самими деревьями, если перемножать нечего.
+    #puts "in multiplier"
+    #tree.draw
+    #puts ""
     #self.draw
-
-    #print 'deti:', children, "\n"
-    @nodes[node2_id].children = children
-    #print "node 2 children must be same:", @nodes[node2_id].children
-    children.each do |child_id| 
-      @nodes[child_id].parent = node2_id
-    end
-  end
-
-  def sort
-    @nodes.each do |node|
-      to_sort = get_children_data(node.id) #возвращает массив data из детей и кол-ва их детей
-      to_sort.sort! do |x, y| 
-        if (x[2] <=> y[2]) == 0
-          if(x[1] <=> y[1]) == 0
-            [-1, 1].sample
-          else
-            x[1] <=> y[1]
-          end
-        else
-          x[2] <=> y[2]
+    #puts ""
+    tree_array = []
+    if @data == '+'
+      @children.each do |child|
+        if tree.data == '+' #(a+b)*(c+d)
+    #      puts '(a+b)*(c+d)'
+    #      print @children
+    #      puts ""
+            tree.children.each do |neig_child|
+              sub_tree = Tree.new('*')
+              sub_tree.add_child(child)
+              sub_tree.add_child(neig_child)
+    #          puts "subtree:"
+    #          sub_tree.draw
+              tree_array << sub_tree
+            end
+        else #(a+b)*c
+     #     puts '(a+b)*c'
+     #     puts 'child:'
+     #     child.draw
+          sub_tree = Tree.new('*')
+          sub_tree.add_child(tree)
+          sub_tree.add_child(child)
+          tree_array << sub_tree
+     #     puts 'out of cycle'
         end
-      end #встроенный сортировщик
-      children = to_sort.map { |el| el.first }
-      node.apply_children_data(children) #принимает отсортированный массив и располагает вершины по data в нужном порядке
-    end
-  end
-
-  def get_children_data node_id
-    ret_ar = []
-    @nodes[node_id].children.each do |ch_id|
-      ret_ar << [ch_id, @nodes[ch_id].data, @nodes[ch_id].children.size]
-    end
-    return ret_ar
-  end
-
-  def operate_sum
-    @nodes.first.join("+", self)
-  end
-
-  def operate_mul
-    @nodes.first.join("*", self)
-  end
-
-end
-
-class Node
-
-  def join operator, tree
-    visited = Array.new(tree.nodes.size) { false }
-    id = tree.nodes.index(self)
-
-    if @children.empty?
-      visited[id] = true
-    else
-      @children.each do |son_id|
-        tree.nodes[son_id].join(operator, tree)
-      end
-          (@data == operator && tree.nodes[@parent].data == operator) ? tree.delete_node(id) : visited[id]= true
-    end
-  end 
-
-  def apply_children_data children_id_array
-    @children.clear
-    @children = children_id_array
-  end
-
-  def <=> node #returns 1 if >
-    if node.children.size < @children.size  
-      #puts '<=> returned -1 because of size'
-      return -1 
-    elsif node.children.size > @children.size
-      #puts '<=> returned 1 because of size'
-      return 1
-    else
-      if node.data < @data
-        #puts '<=> returned -1 because of data'
-        return -1
-      elsif node.data > @data
-        #puts '<=> returned 1 because of data'
-        return 1
-      else
-        #puts '<=> returned 0'
-        return 0
-      end
-    end
-  end
-
-end
-
-class Array #here
-  def generate_multiplied muler=1
-    result_array = []
-    if self.size == 1
-      self.flatten.each do |elem|
-        result_array << [muler, elem]
       end
     else
-      self.shift.each do |elem|
-        generate_multiplied(elem)
+      if tree.data == '+' #a*(b+c)
+     #   puts 'a*(b+c)'
+        tree.children.each do |neig_child|
+          sub_tree = Tree.new('*')
+          sub_tree.add_child(neig_child)
+          sub_tree.add_child(self)
+          tree_array << sub_tree
+        end
+      else #a*b
+          #puts 'a*b'
+          sub_tree = Tree.new('*')
+          sub_tree.add_child(self)
+          sub_tree.add_child(tree)
+          tree_array << sub_tree
       end
     end
-    return result_array
+   # puts 'tree_array'
+   # puts tree_array
+    return tree_array
+  end
+
+  def sort_children
+    @children.each{ |child| child.sort_children }
+    if (@data == '*') || (@data == '+')
+      @children.sort! do |x, y|
+        if (x.children.size <=> y.children.size) == 0
+          x.data <=> y.data
+        else
+          x.children.size <=> y.children.size
+        end
+      end
+    end
+  end
+
+  def operate_binary_signs #- /
+    @children.each { |child| child.operate_binary_signs }
+    if @data == '-'
+      #puts @children.size
+      @data = '+'
+      minus_tree = Tree.new('*')
+      minus_tree.add_child(@children.pop)
+      minus_tree.add_child(Tree.new('-1'))
+      @children << minus_tree
+      #puts @children.size
+    elsif @data == '/'
+      #puts @children.size
+      @data = '*'
+      div_tree = Tree.new('^')
+      div_tree.add_child(@children.pop)
+      div_tree.add_child(Tree.new('-1'))
+      @children << div_tree
+      #puts @children.size
+    end
+  end
+
+  def canonize
+    self.operate_binary_signs
+    puts self.to_s
+    self.op_sign('+')
+    puts self.to_s
+    self.op_sign('*')
+    puts self.to_s
+    self.draw
+    #self.open_brackets
+    puts self.to_s
+    self.draw
+    self.calculate
+    puts self.to_s
+    self.sort_children
+    self.draw
   end
 end
+#tree = ['2', '*', 'pi', '*', 'sqrt', '(', 'd', ')'].parse_expression
+#other_tree = ['2', '+', '2'].parse_expression
+#tree.canonize
+#other_tree.canonize
+
+#puts 'parsed:'
+#tree.draw
+#puts "\n================"
+#tree.operate_binary_signs
+#other_tree.operate_binary_signs
+#puts 'operated_binary_signs'
+#tree.draw
+#puts "\n================"
+#tree.op_sign('+')
+#tree.op_sign('*')
+#puts 'signs operated:'
+#tree.draw
+#puts "\n================"
+#puts '-------------------'
+#tree.open_brackets
+#puts '-------------------'
+#puts 'brackets opened:'
+#tree.draw
+#puts "\n================"
+#tree.calculate
+#puts 'constants calculated'
+#tree.draw
+#puts "\n================"
+#tree.sort_children
+#puts 'children sorted'
+#tree.draw
+
+#puts tree.to_s
+#puts other_tree.to_s
+#puts tree == other_tree

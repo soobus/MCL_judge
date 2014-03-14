@@ -3,4 +3,3 @@
 #Data (global variables) getter and keeper
 
 $tokens = []
-$tree = Tree.new

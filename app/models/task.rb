@@ -14,30 +14,29 @@ class Task < ActiveRecord::Base
       true_answer = StringIO.new(self.answer + '#')
       answer_to_check = StringIO.new(self.user_answer + '#')
       read(true_answer)
-      $tokens.parse_expression
+      true_tree = $tokens.parse_expression
     rescue SystemStackError
-      $tree = Tree.new
+      true_tree = Tree.new('N/A')
     ensure
       $tokens.clear
-      $tree1 = $tree
-      $tree = Tree.new
     end
 
     begin
       read(answer_to_check)
-      $tokens.parse_expression
+      check_tree = $tokens.parse_expression
     rescue SystemStackError
-      $tree = Tree.new
+      check_tree = Tree.new('N|A')
     ensure
       $tokens.clear
-      $tree2 = $tree
-      $tree = Tree.new
     end
 
     begin
-      $tree1.canonize
-      $tree2.canonize
-      return $tree1 == $tree2
+      true_tree.canonize
+      true_tree.draw
+      check_tree.canonize
+      check_tree.draw
+      return check_tree.to_s == true_tree.to_s
+
     rescue SystemStackError
       return false
     end

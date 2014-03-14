@@ -1,125 +1,112 @@
-# Valery Nemychnikova sooobus@gmail.com
-# Calculation methods, used by canonizer
+#Calculation methods
 
+=begin
+File.open('allowed_operations', 'r') do |file| #allowed_operations
+  $allowed_op = file.read.split("\n")  
+end
+=end
+
+$allowed_op = ["+", "-", "*", "/", "sin", "cos", "tg", "ctg", "exp", "sqrt", "cbrt", "^", "pi", "e"]  
 
 class Tree
-  def calculate node_id=0
-    node = @nodes[node_id]
-    if ['+', '-', '*', '/', 'sin', 'cos', 'tg', 'ctg', 'exp', 'sqrt', 'sqr'].include?(node.data) 
-      ok = false
-      node.children.each do |child_id|
-        self.calculate(child_id)
-        ok = true if @nodes[child_id].children.empty?
-      end
-      if ok
-        self.calc(node)
-      end
-    else
-      node.children.each do |child_id|
-        self.calculate(child_id)
-      end
+  
+  def calculate
+    #print "current: #{@data}\n"
+    @children.each do |child| #рекурсивно сходили во всех детей
+        child.calculate
+    end
+    #обработали вершину: если подходит, сделали операции, может и схлопнули
+    if $allowed_op.include?(@data) #подходящая операция
+      self.calc_operation(@data)
     end
   end
 
-  def calc node
-    s = 0
-    nodes_to_delete = []
+  def calc_operation sign #все дети гарантированно посещены
+    collector = []
 
-    case node.data
-    when 'sin'
-        data = @nodes[node.children.first].data
-        if data.is_number?
-          s = Math.sin(data.to_f)
-          nodes_to_delete << node.children.first
-        end
-    when 'cos'
-        data = @nodes[node.children.first].data
-        if data.is_number?
-          s = Math.cos(data.to_f)
-          nodes_to_delete << node.children.first
-        end
-    when 'tg'
-        data = @nodes[node.children.first].data
-        if data.is_number?
-          s = Math.tan(data.to_f)
-          nodes_to_delete << node.children.first
-        end
-    when 'ctg'
-        data = @nodes[node.children.first].data
-        if data.is_number?
-          s = 1/Math.tan(data.to_f)
-          nodes_to_delete << node.children.first
-        end
-    when 'exp'
-        data = @nodes[node.children.first].data
-        if data.is_number?
-          s = Math.exp(data.to_f)
-          nodes_to_delete << node.children.first
-        end
-    when 'sqr'
-        data = @nodes[node.children.first].data
-        if data.is_number?
-          s = data.to_f ** 2
-          nodes_to_delete << node.children.first
-        end
-    
-    when 'sqrt'
-        data = @nodes[node.children.first].data
-        if data.is_number?
-          s = Math.sqrt(data.to_f)
-          nodes_to_delete << node.children.first
-        end
+    #print "size: #{@children.size} \n"
+    #print "\n"
 
-    when '+'
-      node.children.each do |child_id|
-        data = @nodes[child_id].data
-        if data.is_number?
-          s+=data.to_f
-          nodes_to_delete << child_id
-        end
-      end
-
-    when '-'
-     if @nodes[node.children.first].data.is_number? && @nodes[node.children.last].data.is_number?
-        s = @nodes[node.children.first].data.to_f - @nodes[node.children.last].data.to_f
-        nodes_to_delete << node.children
-        nodes_to_delete.flatten!
-     end
-
-
-    when '*'
-      s = 1
-      node.children.each do |child_id|
-        data = @nodes[child_id].data
-        if data.is_number?
-          s = s*data.to_f
-          nodes_to_delete << child_id
-        end
-      end
-      
-
-    when '/'
-      if @nodes[node.children.first].data.is_number? && @nodes[node.children.last].data.is_number?
-        s = @nodes[node.children.first].data.to_f / @nodes[node.children.last].data.to_f
-        nodes_to_delete << node.children
-        nodes_to_delete.flatten!
+    @children.each do |child|
+      #puts "child: #{child.data}"
+      if not (child.data =~ /\d/).nil?
+        collector << child
+        puts "added #{child.data}"
       end
     end
 
-    if !nodes_to_delete.empty?
-      if (node.children - nodes_to_delete).empty?
-        node.data = (s.to_i.to_f - s == 0 ? s.to_i.to_s : s.to_s)
-        node.children.each do |node_id|
-          delete_node(node_id)
-        end
-        node.children.clear
+    unless collector.empty?
+      puts "@children.size: #{@children.size}"
+      @children-=collector
+      puts "@children.size: #{@children.size}"
+
+      collector.map!{ |elem| elem.data.to_f }
+
+    #puts "new size: #{@children.size}"
+    print 'collector: '
+    print collector
+
+      sum = collector.count(@data)
+    
+      if @children.empty?
+        @data = sum if not sum.nil?
       else
-        @nodes[nodes_to_delete.shift].data = (s.to_i.to_f - s == 0 ? s.to_i.to_s : s.to_s)
-        nodes_to_delete.each do |node_id|
-          delete_node(node_id)
-        end
-        node.children = node.children - nodes_to_delete
+        self.add_child(Tree.new(sum)) if not sum.nil?
       end
+    end
+  end
+end
+
+class Array
+  def count op_sign
+    case op_sign
+    when '+'
+      res = self.inject{|sum, i| sum+=i}.to_s
+      return res[-2..-1] == '.0' ? res[0...-2] : res
+    when '*'
+      res = self.inject{|sum, i| sum = sum * i}.to_s
+      return res[-2..-1] == '.0' ? res[0...-2] : res
+    when '-'
+      return (-self[0]).to_s
+      return res[-2..-1] == '.0' ? res[0...-2] : res
+    when '/'
+      return ((self.first)/(self.last)).to_s
+      return res[-2..-1] == '.0' ? res[0...-2] : res
+    when 'sin'
+      return Math.sin(self[0]).to_s
+      return res[-2..-1] == '.0' ? res[0...-2] : res
+    when 'cos'
+      return Math.cos(self[0]).to_s
+      return res[-2..-1] == '.0' ? res[0...-2] : res
+    when 'tg'
+      return Math.tan(self[0]).to_s
+      return res[-2..-1] == '.0' ? res[0...-2] : res
+    when 'ctg'
+      return (1/Math.tan(self[0])).to_s
+      return res[-2..-1] == '.0' ? res[0...-2] : res
+    when 'exp'
+      return ((Math::E)**(self[0])).to_s
+      return res[-2..-1] == '.0' ? res[0...-2] : res
+    when 'sqrt'
+      return Math.sqrt(self[0]).to_s
+      return res[-2..-1] == '.0' ? res[0...-2] : res
+    when 'cbrt'
+      return Math.cbrt(self[0]).to_s
+      return res[-2..-1] == '.0' ? res[0...-2] : res
+    when '^'
+      return ((self.first)**(self.last)).to_s
+      return res[-2..-1] == '.0' ? res[0...-2] : res
+    when 'pi'
+      return Math::PI.to_s
+      return res[-2..-1] == '.0' ? res[0...-2] : res
+    when 'e'
+      return Math::E.to_s
+      return res[-2..-1] == '.0' ? res[0...-2] : res
+    end
+    if collector.size == 1
+      return collector.first.to_s
+    else
+      return nil
     end
   end
 end
