@@ -15,7 +15,7 @@ class Tree
     print "\n" + @data + ':'
     @children.each{ |child| print ' ' + child.data}
     @children.each{ |child| child.draw }
-    #print "\n"
+    print "\n"
   end
 
   def to_s

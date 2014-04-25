@@ -6,7 +6,7 @@ File.open('allowed_operations', 'r') do |file| #allowed_operations
 end
 =end
 
-$allowed_op = ["+", "-", "*", "/", "sin", "cos", "tg", "ctg", "exp", "sqrt", "cbrt", "^", "pi", "e"]  
+$allowed_op = ["+", "-", "*", "/", "sin", "cos", "tg", "ctg", "exp", "sqrt", "cbrt", "^", "pi", "e", "sqr"]  
 
 class Tree
   
@@ -16,6 +16,7 @@ class Tree
         child.calculate
     end
     #обработали вершину: если подходит, сделали операции, может и схлопнули
+    
     if $allowed_op.include?(@data) #подходящая операция
       self.calc_operation(@data)
     end
@@ -34,6 +35,10 @@ class Tree
         puts "added #{child.data}"
       end
     end
+
+#добавить умножение на 0 и 1
+
+    
 
     unless collector.empty?
       puts "@children.size: #{@children.size}"
@@ -67,40 +72,41 @@ class Array
       res = self.inject{|sum, i| sum = sum * i}.to_s
       return res[-2..-1] == '.0' ? res[0...-2] : res
     when '-'
-      return (-self[0]).to_s
+      res = (-self[0]).to_s
       return res[-2..-1] == '.0' ? res[0...-2] : res
     when '/'
-      return ((self.first)/(self.last)).to_s
+      res = ((self.first)/(self.last)).to_s
       return res[-2..-1] == '.0' ? res[0...-2] : res
     when 'sin'
-      return Math.sin(self[0]).to_s
+      res =  Math.sin(self[0]).to_s
       return res[-2..-1] == '.0' ? res[0...-2] : res
     when 'cos'
-      return Math.cos(self[0]).to_s
+      res = Math.cos(self[0]).to_s
       return res[-2..-1] == '.0' ? res[0...-2] : res
     when 'tg'
-      return Math.tan(self[0]).to_s
+      res = Math.tan(self[0]).to_s
       return res[-2..-1] == '.0' ? res[0...-2] : res
     when 'ctg'
-      return (1/Math.tan(self[0])).to_s
+      res = (1/Math.tan(self[0])).to_s
       return res[-2..-1] == '.0' ? res[0...-2] : res
     when 'exp'
-      return ((Math::E)**(self[0])).to_s
+      res = ((Math::E)**(self[0])).to_s
       return res[-2..-1] == '.0' ? res[0...-2] : res
     when 'sqrt'
-      return Math.sqrt(self[0]).to_s
+      res = Math.sqrt(self[0]).to_s
       return res[-2..-1] == '.0' ? res[0...-2] : res
     when 'cbrt'
-      return Math.cbrt(self[0]).to_s
+      res = Math.cbrt(self[0]).to_s
       return res[-2..-1] == '.0' ? res[0...-2] : res
     when '^'
-      return ((self.first)**(self.last)).to_s
+      res = ((self.first)**(self.last)).to_s
       return res[-2..-1] == '.0' ? res[0...-2] : res
     when 'pi'
       return Math::PI.to_s
-      return res[-2..-1] == '.0' ? res[0...-2] : res
     when 'e'
       return Math::E.to_s
+    when 'sqr'
+      res = (self[0] * self[0]).to_s
       return res[-2..-1] == '.0' ? res[0...-2] : res
     end
     if collector.size == 1

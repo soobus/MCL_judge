@@ -79,6 +79,7 @@ class Tree
               sub_tree = Tree.new('*')
               sub_tree.add_child(child)
               sub_tree.add_child(neig_child)
+              sub_tree.calculate
     #          puts "subtree:"
     #          sub_tree.draw
               tree_array << sub_tree
@@ -90,6 +91,7 @@ class Tree
           sub_tree = Tree.new('*')
           sub_tree.add_child(tree)
           sub_tree.add_child(child)
+          sub_tree.calculate
           tree_array << sub_tree
      #     puts 'out of cycle'
         end
@@ -101,6 +103,7 @@ class Tree
           sub_tree = Tree.new('*')
           sub_tree.add_child(neig_child)
           sub_tree.add_child(self)
+          sub_tree.calculate
           tree_array << sub_tree
         end
       else #a*b
@@ -108,6 +111,7 @@ class Tree
           sub_tree = Tree.new('*')
           sub_tree.add_child(self)
           sub_tree.add_child(tree)
+          sub_tree.calculate
           tree_array << sub_tree
       end
     end
@@ -167,38 +171,34 @@ class Tree
     self.draw
   end
 end
-#tree = ['2', '*', 'pi', '*', 'sqrt', '(', 'd', ')'].parse_expression
-#other_tree = ['2', '+', '2'].parse_expression
-#tree.canonize
-#other_tree.canonize
 
-#puts 'parsed:'
-#tree.draw
-#puts "\n================"
-#tree.operate_binary_signs
-#other_tree.operate_binary_signs
-#puts 'operated_binary_signs'
-#tree.draw
-#puts "\n================"
-#tree.op_sign('+')
-#tree.op_sign('*')
-#puts 'signs operated:'
-#tree.draw
-#puts "\n================"
-#puts '-------------------'
-#tree.open_brackets
-#puts '-------------------'
-#puts 'brackets opened:'
-#tree.draw
-#puts "\n================"
-#tree.calculate
-#puts 'constants calculated'
-#tree.draw
-#puts "\n================"
-#tree.sort_children
-#puts 'children sorted'
-#tree.draw
+tree = ['100', '-', '10', '+', '(', '-',  '10', ')'].parse_expression
+tree.canonize
 
-#puts tree.to_s
-#puts other_tree.to_s
-#puts tree == other_tree
+puts 'parsed:'
+tree.draw
+puts "\n================"
+tree.operate_binary_signs
+puts 'operated_binary_signs'
+tree.draw
+puts "\n================"
+tree.op_sign('+')
+tree.op_sign('*')
+puts 'signs operated:'
+tree.draw
+puts "\n================"
+puts '-------------------'
+tree.open_brackets
+puts '-------------------'
+puts 'brackets opened:'
+tree.draw
+puts "\n================"
+tree.calculate
+puts 'constants calculated'
+tree.draw
+puts "\n================"
+tree.sort_children
+puts 'children sorted'
+tree.draw
+
+puts tree.to_s

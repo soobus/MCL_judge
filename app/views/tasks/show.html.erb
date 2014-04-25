@@ -49,6 +49,6 @@
   <% end %>
 </div>
 
-<p><%= @task.check_answer%></p> 
+<p><%= @task.check_answer ? 'Верно' : 'Неверно'%></p> 
 <%= link_to 'Back', tasks_path %>
 
